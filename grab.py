@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import vcr
+#import vcr
 import requests
 from hashlib import sha1
 from bs4 import BeautifulSoup
@@ -28,6 +28,9 @@ def grab(html, file=False,  update=False, dev=None):
         with open(html) as f:
             soup = BeautifulSoup(f.read(), "html.parser")
     else:
+        print("Error: vcr not supported")
+        exit(1)
+        '''
         vcr_settings = {
             'cassette_library_dir': 'vcr_cassettes'
         }
@@ -47,6 +50,7 @@ def grab(html, file=False,  update=False, dev=None):
             with open(dev, 'w') as f:
                 f.write(html+'\n\n')
                 f.write(soup.__repr__()+'\n')
+        '''
 
     return soup.body
 

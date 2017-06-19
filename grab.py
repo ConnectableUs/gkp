@@ -4,6 +4,10 @@
 import requests
 from hashlib import sha1
 from bs4 import BeautifulSoup
+import os
+from tinydb import TinyDB, Query
+from tinydb.database import Table as dbTable
+from yamlstorage import YAMLStorage
 
 # by default, this is for grabbing twitter threads,
 #  which are otherwise impossible to print!
@@ -55,6 +59,84 @@ def grab(html, file=False,  update=False, dev=None):
     return soup.body
 
 
+def save2yaml(search_results, file_name, default_table='google_keep'):
+    '''
+    TinyDB Query search results return a list of Elements
+    '''
+    with TinyDB(file_name, default_table=default_table, storage=YAMLStorage) as db:
+        notes = db.table(default_table)
+        json2yaml(search_results, notes)
+        # on exit, this should write and close the output YAML db;
+
+
+def json2yaml(jtab, ytab,
+              stripset={'archived','title','content','heading'} ):
+    '''
+    jtab:  either a TinyDB table, or search result (list of db Elements)
+    ytab:  the receiving (probably empty) dbTable of a YAMLStorage type
+           (nothing enforces this, so this is really just a table-copy)
+    TinyDB:
+        json tables are about 500x faster loading,
+           so useful for querying;
+        yaml talbes in block style are conducive
+           to browsing w/ an editor, looking, inspection
+
+    Use this to create a yaml.
+    - create a TinyDB table instance you want to convert from;
+    - create a TinyDB yaml table instance you want to convert to;
+      (suggest a clean file, or at least a clean table)
+
+    - if you care to strip() strings in any of the note entries,
+      pass a set or tuple of keys to strip (str or list of str's);
+      a useful default is included, but - after seeing these in yaml,
+      I now strip these at soup parsing;
+
+    RETURNS:
+        nothing: if succeeded, you should close the TinyDBs as appropriate
+
+    E.g.:
+        >>> db2 = TinyDB("foo.yaml", storage=YAMLStorage)
+        >>> ytab = db2.table('keep_notes')
+        >>> json2yaml(jtab, ytab)  # adds to the yaml DB file
+    '''
+    # if you look over the jtab.all() generator,
+    #   tinyDB will just save a single item, after iterating
+    #   over them all;  will need to look into this later;
+    #   - it might just be something I need to update in
+    #     class YAMLStorage
+    notes = jtab.all() if isinstance(jtab, dbTable) else jtab
+    if stripset:
+        for note in notes:
+            for i in stripset:
+                # if we want to remove whitespace from this group:
+                if i in note:
+                    d = note[i]
+                    if isinstance(d, list):
+                        # use enumerate to change
+                        #  the original list, which is a ref
+                        for k,v in enumerate(d):
+                            d[k] = v.strip()
+                    else:
+                        d = d.strip()
+
+    #remove any dbElement cruft, let new indecies be created:
+    ytab.insert_multiple([dict(i) for i in notes])
+
+
+
+# TODO:
+# - I want to make this both TinyDB active
+#   (it's too nice to just load from the json into a REPL)
+# - And pony.orm (since it does JSON types on backends which
+#   doen't support it - e.g. sqllite), with flask-ponywoosh query/search
+#   (I think sqlalchemy w/ postgres, and flask-appbuilder might have
+#    worked, but seemed more to learn to get it going)
+# - I might possibly eventually also get this working with
+#   some version of Redis, possibly thru the walrus query stuff,
+#   which also supports the golang storage w/ redis api;
+# - I probably want some functions to keep this all in one place;
+# - I may (?) also want to checkout google-api to access directly,
+#   eventually;
 if __name__ == "__main__":
     #DEV:
     '''
@@ -73,12 +155,12 @@ if __name__ == "__main__":
           >>> pat = re.compile(r'(#\w+)')
           >>> pat.findall(some_string)  # returns list of tags
     '''
-    import os
-    from tinydb import TinyDB
-    
-    db = TinyDB('Keep.json')
+    from pony import orm
+
+
+    db = TinyDB('Keep.json')  # could just set default_table here;
     table = db.table('notes')
-    
+
     hbreak = lambda i: i.name in ('br',)
     for root, dirs, files in os.walk('./Takeout/Keep/'):
         for filename in files:
@@ -90,7 +172,7 @@ if __name__ == "__main__":
             note = soup.next
             assert len(note['class'])>0 and note['class'][0] == 'note', \
                    f'{filename} does not appear to be a note!'
-            
+
             note_dict = {}
             key = 'unknown'
             i = note.next
@@ -111,10 +193,10 @@ if __name__ == "__main__":
                     # if key not in ('heading', 'labels'):
                     #     pat.finall(i.text)
                     #     ... use sets, and set update (union) to avoid dup-tags
-                # next element    
+                # next element
                 i = i.next
             # save the note_dict into a storage - list, or db;
             table.insert(note_dict)
     db.close()
 
-                
+

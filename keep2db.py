@@ -45,9 +45,10 @@ def grab(html, file=False,  update=False, dev=None):
 
 # TODO:
 # - I want to make this both TinyDB active
-#   (it's too nice to just load from the json into a REPL)
+#   (it's nice to just load from the json into a REPL
+#    but do I really need TinyDB for that?)
 # - And pony.orm (since it does JSON types on backends which
-#   doen't support it - e.g. sqllite), with flask-ponywoosh query/search
+#   doesn't support it - e.g. sqllite), with flask-ponywoosh query/search
 #   (I think sqlalchemy w/ postgres, and flask-appbuilder might have
 #    worked, but seemed more to learn to get it going)
 # - I might possibly eventually also get this working with
@@ -56,26 +57,15 @@ def grab(html, file=False,  update=False, dev=None):
 # - I probably want some functions to keep this all in one place;
 # - I may (?) also want to checkout google-api to access directly,
 #   eventually;
-if __name__ == "__main__":
-    #DEV:
-    '''
-    --- ok, this works for a single Keep record; now:
-    TODO:
-        - loop through every file in the Keep directory;
-        - store to TinyDB
-          >>> from tinydb import TinyDB, Query
-          inserting each note should work fine.
-          >>> db = TinyDB('filename.json')
-          at each "note" (Keep file) read, insert:
-          >>> db.insert(note_dict)
-          its saved as you go, so simple as:
-          >>> db.close()
-        - add processing and separately saving hashtags
-          >>> pat = re.compile(r'(#\w+)')
-          >>> pat.findall(some_string)  # returns list of tags
-    '''
+##
+# But here's the thing:  with "searchnotes", this is fully useful
+#  in a ipython repl - for search and save out to a yaml.  So the
+#  above TODOs may not be of any real merit.  We'll see.
 
+if __name__ == "__main__":
+    # DEV:
     # TODO: parameterize the db filename, but keep a default:
+    # TODO: as it stands now, wonder if tinydb is of any utility;
     # MAYBE: parameterize default_table, but leave it a default:
     db_name = 'Keep.json'
     notes_name = 'notes'

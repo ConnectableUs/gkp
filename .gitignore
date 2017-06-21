@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 # specific to this project
-my-google-data-downloads/
+my-google-data-downloads
 Takeout/
 *.yaml
 *.json

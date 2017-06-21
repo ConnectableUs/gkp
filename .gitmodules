@@ -1,0 +1,3 @@
+[submodule "tinydb"]
+	path = tinydb
+	url = git@github.com:msiemens/tinydb.git

@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 
 #import vcr
-import requests
-from hashlib import sha1
-from bs4 import BeautifulSoup
 import os
+import re
+import requests
+# from hashlib import sha1
+from bs4 import BeautifulSoup
 from tinydb import TinyDB, Query
-from tinydb.database import Table as dbTable
+# from tinydb.database import Table as dbTable
 '''
 OBSOLETE:
 from yamlstorage import YAMLStorage
@@ -165,15 +166,19 @@ if __name__ == "__main__":
     # TODO: parameterize the db filename, but keep a default:
     # MAYBE: parameterize default_table, but leave it a default:
     db_name = 'Keep.json'
-    default_table = 'notes'
+    notes_name = 'notes'
+    archives_name = 'archives'
     walk_path = './Takeout/Keep/'
     newlines = '\n'  # only want to strip newlines from output
     tag_pat = re.compile(r'(#\w+)')
     hbreak = lambda i: i.name in ('br',)
 
-    db = TinyDB(db_name, default_table=default_table)  # could just set default_table here;
+    db = TinyDB(db_name)
     # grab default table
-    table = db.table()
+    # ... except this doesn't work the I expect:
+    # ... default_table doesn't do squat in opening the db
+    notes = db.table(notes_name)
+    archives = db.table(archives_name)
 
     # TODO: parameterize the path name (I think no default - force passing one)
     for root, dirs, files in os.walk(walk_path):
@@ -206,9 +211,15 @@ if __name__ == "__main__":
                     note_dict[key].append('' if hbreak(i) else i.strip(newlines))
                     ## tag collection: we're in a string, so do it here
                     # places to skip looking for hashtags
-                    if key not in ('archive', heading', 'labels'):
+                    # - don't search empty strings, <brk/>, or
+                    #   the things which are timestamps, or already tag-like
+                    if i and not hbreak(i) \
+                       and key not in ('archive','heading','labels'):
+                        assert isinstance(i, str), \
+                            f"i: [{i}] is type {type(i)}; str needed"
                         tags = tag_pat.findall(i)
                         if tags:
+                            # set ensures no dup tags per note
                             if 'tags' not in note_dict:
                                 note_dict['tags'] = set()
                             note_dict['tags'].update(tags)
@@ -216,7 +227,18 @@ if __name__ == "__main__":
                 # next element
                 i = i.next
             # save the note_dict into a storage - list, or db;
-            table.insert(note_dict)
+            if 'tags' in note_dict:
+                # sets are not JSON serializable:
+                note_dict['tags'] = list(note_dict['tags'])
+            # TODO: if "archive", put it in a separate 'archives' table
+            if 'archived' in note_dict:
+                archives.insert(note_dict)
+            else:
+                notes.insert(note_dict)
+
+    print(f"{len(notes)} notes...")
+    print(f"{len(archives)} archives...")
     db.close()
+
 
 

@@ -7,14 +7,7 @@ import requests
 # from hashlib import sha1
 from bs4 import BeautifulSoup
 from tinydb import TinyDB, Query
-# from tinydb.database import Table as dbTable
-'''
-OBSOLETE:
-from yamlstorage import YAMLStorage
-'''
 
-# by default, this is for grabbing twitter threads,
-#  which are otherwise impossible to print!
 def grab(html, file=False,  update=False, dev=None):
     '''
     grab a url and save it locally w/ vcr;
@@ -23,7 +16,8 @@ def grab(html, file=False,  update=False, dev=None):
            and renders the remaining options inactive;
     update = True; use vcrpy record_mode "all",
           to update the cassette; only valid
-          if file=False;
+          if file=False; -- makes no sense for this use,
+          since repo is all local; OBSOLETE
     dev - develop: save an uncompressed text
           copy if results, with the url, to
           the text file named in 'dev' argument.
@@ -35,100 +29,18 @@ def grab(html, file=False,  update=False, dev=None):
     if file:
         with open(html) as f:
             soup = BeautifulSoup(f.read(), "html.parser")
+    # for current use, this is really only for file-based parsing;
     else:
         print("Error: vcr not supported")
         exit(1)
-        '''
-        vcr_settings = {
-            'cassette_library_dir': 'vcr_cassettes'
-        }
-        if update:
-            vcr_settings.update({'record_mode':'all'})
-        my_vcr = vcr.VCR(**vcr_settings)
 
-        # need bytestring for hashlib routines;
-        burl = sha1(bytearray(html, 'utf8'))
-        # name the vcr saved file w/ hexdigest of url
-        hd = burl.hexdigest()  # for yaml filename
-        with my_vcr.use_cassette(f'{hd}.yaml'):
-            soup = BeautifulSoup(requests.get(html).text, "html.parser")
-
-        # if you want to test a bit more:
-        if dev:  # save this, so you can develop a script
-            with open(dev, 'w') as f:
-                f.write(html+'\n\n')
-                f.write(soup.__repr__()+'\n')
-        '''
+    # if you want to test a bit more:
+    if dev:  # save this, so you can develop a script
+        with open(dev, 'w') as f:
+            f.write(html+'\n\n')
+            f.write(soup.__repr__()+'\n')
 
     return soup.body
-
-
-"""
-OBSOLETE:
-## USE commandline tool json2yaml instead (much faster, simpler)
-def save2yaml(search_results, file_name, default_table='google_keep'):
-    # TinyDB Query search results return a list of Elements
-    with TinyDB(file_name, default_table=default_table, storage=YAMLStorage) as db:
-        notes = db.table(default_table)
-        json2yaml(search_results, notes)
-        # on exit, this should write and close the output YAML db;
-
-
-## USE commandline tool json2yaml instead (much faster, simpler)
-def json2yaml(jtab, ytab,
-              stripset={'archived','title','content','heading'} ):
-    '''
-    jtab:  either a TinyDB table, or search result (list of db Elements)
-    ytab:  the receiving (probably empty) dbTable of a YAMLStorage type
-           (nothing enforces this, so this is really just a table-copy)
-    TinyDB:
-        json tables are about 500x faster loading,
-           so useful for querying;
-        yaml talbes in block style are conducive
-           to browsing w/ an editor, looking, inspection
-
-    Use this to create a yaml.
-    - create a TinyDB table instance you want to convert from;
-    - create a TinyDB yaml table instance you want to convert to;
-      (suggest a clean file, or at least a clean table)
-
-    - if you care to strip() strings in any of the note entries,
-      pass a set or tuple of keys to strip (str or list of str's);
-      a useful default is included, but - after seeing these in yaml,
-      I now strip these at soup parsing;
-
-    RETURNS:
-        nothing: if succeeded, you should close the TinyDBs as appropriate
-
-    E.g.:
-        >>> db2 = TinyDB("foo.yaml", storage=YAMLStorage)
-        >>> ytab = db2.table('keep_notes')
-        >>> json2yaml(jtab, ytab)  # adds to the yaml DB file
-    '''
-    # if you look over the jtab.all() generator,
-    #   tinyDB will just save a single item, after iterating
-    #   over them all;  will need to look into this later;
-    #   - it might just be something I need to update in
-    #     class YAMLStorage
-    notes = jtab.all() if isinstance(jtab, dbTable) else jtab
-    if stripset:
-        for note in notes:
-            for i in stripset:
-                # if we want to remove whitespace from this group:
-                if i in note:
-                    d = note[i]
-                    if isinstance(d, list):
-                        # use enumerate to change
-                        #  the original list, which is a ref
-                        for k,v in enumerate(d):
-                            d[k] = v.strip()
-                    else:
-                        d = d.strip()
-
-    #remove any dbElement cruft, let new indecies be created:
-    ytab.insert_multiple([dict(i) for i in notes])
-"""
-
 
 
 # TODO:
@@ -239,6 +151,4 @@ if __name__ == "__main__":
     print(f"{len(notes)} notes...")
     print(f"{len(archives)} archives...")
     db.close()
-
-
 

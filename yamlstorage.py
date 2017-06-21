@@ -2,6 +2,10 @@ import os
 import yaml
 from tinydb import Storage
 
+# I don't really need this; here's why:
+# - it's ~500 slower than the json write;
+# - much faster to just convert w/ my one-liner
+#   command line json2yaml.py - which is really all I need
 
 # reading in for json of ~2k items: 12ms
 # reading in for yaml of ~2k items: 6s

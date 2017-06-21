@@ -3,21 +3,6 @@ import re
 import yaml
 from tinydb import TinyDB  #, Query
 
-#  This is for ipython interactive
-def breakpoint(condition=True):
-    '''
-    in ipython:
-    - breakpoint() <= break always
-    - breakpoint(False) <= never break
-    - breakpoint(condition) <= break if True
-    '''
-    # import here, to limit the imported names
-    # to this function's namespace
-    from sys import _getframe
-    from IPython.terminal import debugger
-    if condition:
-        debugger.set_trace(_getframe().f_back)
-        return debugger
 
 # load parsed notes into something to search for:
 db = TinyDB('Keep.json')
@@ -27,6 +12,11 @@ dbarchive = db.table('archived')
 # res = table.search(Note.title.any(['Summit']))
 #- so this is to make search look through all note text
 
+# This is not necessary anymore, but is left here for
+#  examples of forms you can sent to findnotes(),
+#  which will taks a string, or tuple w/ re-string/re-flags
+#  and either a table, or a list, or a generator for the
+#  list of notes (thus you can narrow searches)
 ## make it a python form, so we can use it
 # get rid of db.Element cruft (e.g. record numbering):
 # - might as well make it a generator, for memory skimpiness

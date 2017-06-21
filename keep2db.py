@@ -142,13 +142,12 @@ if __name__ == "__main__":
             if 'tags' in note_dict:
                 # sets are not JSON serializable:
                 note_dict['tags'] = list(note_dict['tags'])
-            # TODO: if "archive", put it in a separate 'archives' table
             if 'archived' in note_dict:
                 archives.insert(note_dict)
             else:
                 notes.insert(note_dict)
 
     print(f"{len(notes)} notes...")
-    print(f"{len(archives)} archives...")
+    print(f"{len(archives)} archived notes...")
     db.close()
 

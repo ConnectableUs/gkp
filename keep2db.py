@@ -7,7 +7,10 @@ from bs4 import BeautifulSoup
 import os
 from tinydb import TinyDB, Query
 from tinydb.database import Table as dbTable
+'''
+OBSOLETE:
 from yamlstorage import YAMLStorage
+'''
 
 # by default, this is for grabbing twitter threads,
 #  which are otherwise impossible to print!
@@ -59,16 +62,18 @@ def grab(html, file=False,  update=False, dev=None):
     return soup.body
 
 
+"""
+OBSOLETE:
+## USE commandline tool json2yaml instead (much faster, simpler)
 def save2yaml(search_results, file_name, default_table='google_keep'):
-    '''
-    TinyDB Query search results return a list of Elements
-    '''
+    # TinyDB Query search results return a list of Elements
     with TinyDB(file_name, default_table=default_table, storage=YAMLStorage) as db:
         notes = db.table(default_table)
         json2yaml(search_results, notes)
         # on exit, this should write and close the output YAML db;
 
 
+## USE commandline tool json2yaml instead (much faster, simpler)
 def json2yaml(jtab, ytab,
               stripset={'archived','title','content','heading'} ):
     '''
@@ -121,6 +126,7 @@ def json2yaml(jtab, ytab,
 
     #remove any dbElement cruft, let new indecies be created:
     ytab.insert_multiple([dict(i) for i in notes])
+"""
 
 
 
@@ -155,14 +161,22 @@ if __name__ == "__main__":
           >>> pat = re.compile(r'(#\w+)')
           >>> pat.findall(some_string)  # returns list of tags
     '''
-    from pony import orm
 
-
-    db = TinyDB('Keep.json')  # could just set default_table here;
-    table = db.table('notes')
-
+    # TODO: parameterize the db filename, but keep a default:
+    # MAYBE: parameterize default_table, but leave it a default:
+    db_name = 'Keep.json'
+    default_table = 'notes'
+    walk_path = './Takeout/Keep/'
+    newlines = '\n'  # only want to strip newlines from output
+    tag_pat = re.compile(r'(#\w+)')
     hbreak = lambda i: i.name in ('br',)
-    for root, dirs, files in os.walk('./Takeout/Keep/'):
+
+    db = TinyDB(db_name, default_table=default_table)  # could just set default_table here;
+    # grab default table
+    table = db.table()
+
+    # TODO: parameterize the path name (I think no default - force passing one)
+    for root, dirs, files in os.walk(walk_path):
         for filename in files:
             soup = grab(os.path.join(root,filename), file=True)
             if soup is None:
@@ -186,13 +200,19 @@ if __name__ == "__main__":
                         key = 'labels'
                     if key not in note_dict:
                         note_dict[key] = []
-                elif hbreak(i) or i.strip():  # TODO - multi-nls? i.strip()?
+                # save no empty lines, unless an explicit <br/>:
+                elif hbreak(i) or i.strip():
                     # every entry a list;
-                    note_dict[key].append('\n' if hbreak(i) else i)
-                    # insert tag collection here:
-                    # if key not in ('heading', 'labels'):
-                    #     pat.finall(i.text)
-                    #     ... use sets, and set update (union) to avoid dup-tags
+                    note_dict[key].append('' if hbreak(i) else i.strip(newlines))
+                    ## tag collection: we're in a string, so do it here
+                    # places to skip looking for hashtags
+                    if key not in ('archive', heading', 'labels'):
+                        tags = tag_pat.findall(i)
+                        if tags:
+                            if 'tags' not in note_dict:
+                                note_dict['tags'] = set()
+                            note_dict['tags'].update(tags)
+
                 # next element
                 i = i.next
             # save the note_dict into a storage - list, or db;

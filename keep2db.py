@@ -72,7 +72,10 @@ if __name__ == "__main__":
     archives_name = 'archives'
     walk_path = './Takeout/Keep/'
     newlines = '\n'  # only want to strip newlines from output
-    tag_pat = re.compile(r'(#\w+)')
+    ## instead, use explicit char ranges, and add '-', so
+    #    hyphenated tags are caught as one (e.g. 'speak-self')
+    #tag_pat = re.compile(r'(#\w+)')
+    tag_pat = re.compile(r'(#[a-zA-Z0-9_-]+)')
     hbreak = lambda i: i.name in ('br',)
 
     db = TinyDB(db_name)

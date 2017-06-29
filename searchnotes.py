@@ -25,8 +25,15 @@ myre = (r'summit', re.I)
 
 
 def findnotes(myre, notes, fields=set()):
+    '''
+    myre:  regular expression to search for;
+           can be search-string, or tuple w/ (string, RE-flags);
+    notes: a generator or list of notes, or a list of tinydb table.Elements
+    fields: fields to search (searches all if empty)
+    '''
     from types import GeneratorType
 
+    # accept multiple forms of myre for pattern
     pat = re.compile(*myre if isinstance(myre, (list,tuple)) \
                  else myre)
     found = []   # return this

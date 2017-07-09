@@ -4,11 +4,14 @@ __pycache__/
 *$py.class
 
 # specific to this project
+python-prompt-toolkit/
 my-google-data-downloads
 Takeout/
+# I want to eventually version these:
 *.yaml
 *.json
 *-
+foo*
 
 # C extensions
 *.so

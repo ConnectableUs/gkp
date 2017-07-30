@@ -7,6 +7,8 @@ __pycache__/
 python-prompt-toolkit/
 my-google-data-downloads
 Takeout/
+# this one is in a private repo:
+keep-db/
 # I want to eventually version these:
 *.yaml
 *.json

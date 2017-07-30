@@ -33,3 +33,5 @@ But letting TinyDB manage this kind of "pretty-print" output, it uses this
 consistently, and things seem to work.
 
 I've added the `indent=2` keyword to format json.dump(), and this seems to work fine.
+It turns out the git-diff's are much cleaner when TinyDB is allowed to build up the
+existing json file.

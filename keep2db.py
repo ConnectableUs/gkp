@@ -78,7 +78,10 @@ if __name__ == "__main__":
     tag_pat = re.compile(r'(#[a-zA-Z0-9_-]+)')
     hbreak = lambda i: i.name in ('br',)
 
-    db = TinyDB(db_name)
+    # TinyDB passes all but "storage" arguments on to json.dump(),
+    #  so we're using indent here to "pretty-print" the output
+    #  so that git versioning of the db's works;
+    db = TinyDB(db_name, indent=2)
     # grab default table
     # ... except this doesn't work the I expect:
     # ... default_table doesn't do squat in opening the db

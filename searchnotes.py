@@ -37,8 +37,12 @@ def findnotes(myre, notes, fields=set()):
     from types import GeneratorType
 
     # accept multiple forms of myre for pattern
-    pat = re.compile(*myre if isinstance(myre, (list,tuple)) \
-                 else myre)
+    ### TODO: this looks like a python bug to me:
+    #   pat = re.compile(*myre if isinstance(myre, (list,tuple)) \
+    #             else myre)
+    pat = re.compile(*myre) if isinstance(myre, (list,tuple)) \
+      else re.compile(myre)
+
     found = []   # return this
     # make this the form of a list list if needed:
     form_of_list = lambda v: v if isinstance(v, (list, GeneratorType)) \

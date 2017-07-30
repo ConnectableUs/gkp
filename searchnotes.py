@@ -8,7 +8,7 @@ from tinydb import TinyDB  #, Query
 # TinyDB passes all but "storage" arguments on to json.dump(),
 #  so we're using indent here to "pretty-print" the output
 #  so that git versioning works;
-db = TinyDB('Keep.json', indent=2)
+db = TinyDB('keep-db/Keep.json', indent=2)
 dbnotes = db.table('notes')
 dbarchive = db.table('archived')
 #- this doesn't work as I'd want

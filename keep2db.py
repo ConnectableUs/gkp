@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # TODO: parameterize the db filename, but keep a default:
     # TODO: as it stands now, wonder if tinydb is of any utility;
     # MAYBE: parameterize default_table, but leave it a default:
-    db_name = 'Keep.json'
+    db_name = 'keep-db/Keep.json'
     notes_name = 'notes'
     archives_name = 'archives'
     walk_path = './Takeout/Keep/'

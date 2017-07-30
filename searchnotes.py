@@ -37,11 +37,13 @@ def findnotes(myre, notes, fields=set()):
     from types import GeneratorType
 
     # accept multiple forms of myre for pattern
-    ### TODO: this looks like a python bug to me:
-    #   pat = re.compile(*myre if isinstance(myre, (list,tuple)) \
-    #             else myre)
-    pat = re.compile(*myre) if isinstance(myre, (list,tuple)) \
-      else re.compile(myre)
+    # Note: this is the consequence of the unpack operator
+    #       binding to the entire expression in a function-call:
+    pat = re.compile( *(myre if isinstance(myre, (list,tuple)) \
+                    else (myre,)) )
+    # this kind of dual-call is unnecessary:
+    # pat = re.compile(*myre) if isinstance(myre, (list,tuple)) \
+    #   else re.compile(myre)
 
     found = []   # return this
     # make this the form of a list list if needed:
@@ -104,6 +106,6 @@ def savefind(note_list, file_name, mode="w", start=0,
     string_range = lambda start,stop,w: (f'{i+start:0{w}}' for i in range(1,stop+1))
 
     inotes = dict(zip(string_range(start,list_len,w), note_list))
-    with open(file_name, 'w') as f:
+    with open(file_name, mode) as f:
         yaml.dump(inotes, f, default_flow_style=False)
 

@@ -91,6 +91,7 @@ if __name__ == "__main__":
     # TODO: parameterize the path name (I think no default - force passing one)
     for root, dirs, files in os.walk(walk_path):
         for filename in files:
+            print(f'{filename}...')
             soup = grab(os.path.join(root,filename), file=True)
             if soup is None:
                 print(f'{os.path.join(root, filename)} does not appear to be an html file;')

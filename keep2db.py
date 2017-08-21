@@ -3,10 +3,10 @@
 #import vcr
 import os
 import re
-import requests
 # from hashlib import sha1
 from bs4 import BeautifulSoup
-from tinydb import TinyDB, Query
+from tinydb import TinyDB
+import magic  # pip import python-mgic
 
 def grab(html, file=False,  update=False, dev=None):
     '''
@@ -89,13 +89,27 @@ if __name__ == "__main__":
     archives = db.table(archives_name)
 
     # TODO: parameterize the path name (I think no default - force passing one)
+    W = 0  # print width
     for root, dirs, files in os.walk(walk_path):
         for filename in files:
-            print(f'{filename}...')
-            soup = grab(os.path.join(root,filename), file=True)
-            if soup is None:
-                print(f'{os.path.join(root, filename)} does not appear to be an html file;')
+            # we're printing filename progress on one line;
+            # - use the max filename width,
+            #   with at least 3*'.' on each side of filename
+            W = max(W, len(filename)+6)
+            print(f'{filename:.^{W}}', end='\r')
+            # check for type of file - can have image files from keep:
+            fn = os.path.join(root,filename)
+            f_type = magic.from_file(fn, mime=True)
+            # OLD:   if soup is None:
+            # TODO:
+            # if 'image' in f_type:
+                #  need to do _something_ with image files,
+                #   which can be in keep-output
+            if 'xml' not in f_type:
+                print(f'{fn} does not appear to be an html file;')
                 continue
+
+            soup = grab(fn, file=True)
             # for Takeout, this seems to work:
             note = soup.next
             assert len(note['class'])>0 and note['class'][0] == 'note', \
@@ -103,6 +117,16 @@ if __name__ == "__main__":
 
             note_dict = {}
             key = 'unknown'
+
+            # embeded image from a twitter link caused trouble;
+            #  - don't need to worry about it, as it's just a
+            #    prview, but leaving this in for any future glitch;
+            #  - it took a while for this one to crop up.
+            '''
+            if filename.startswith('Our experience'):
+                import pdb; pdb.set_trace()
+            '''
+
             i = note.next
             while i:
                 # process here
@@ -115,7 +139,7 @@ if __name__ == "__main__":
                     if key not in note_dict:
                         note_dict[key] = []
                 # save no empty lines, unless an explicit <br/>:
-                elif hbreak(i) or i.strip():
+                elif hbreak(i) or ( isinstance(i, str) and i.strip() ):
                     # every entry a list;
                     note_dict[key].append('' if hbreak(i) else i.strip(newlines))
                     ## tag collection: we're in a string, so do it here
@@ -132,7 +156,10 @@ if __name__ == "__main__":
                             if 'tags' not in note_dict:
                                 note_dict['tags'] = set()
                             note_dict['tags'].update(tags)
-
+                elif not isinstance(i, str):  # empty strings skipped above;
+                    # unexpected element - skipping; warning:
+                    print(f'>>> unexpected element {i.name} in {filename}; skipping;')
+                    #print(f'   >>> {i}')
                 # next element
                 i = i.next
             # save the note_dict into a storage - list, or db;
@@ -144,7 +171,8 @@ if __name__ == "__main__":
             else:
                 notes.insert(note_dict)
 
-    print(f"{len(notes)} notes...")
+    # add a newline, as filenames are just progress-spit on one line, above:
+    print(f"\n{len(notes)} notes...")
     print(f"{len(archives)} archived notes...")
     db.close()
 

@@ -5,10 +5,9 @@ import os
 import re
 # from hashlib import sha1
 from bs4 import BeautifulSoup
-from tinydb import TinyDB, Query
-from tinydb.operations import delete
-
-import magic  # pip import python-magic
+from tinydb import TinyDB
+import magic  # pip import python-mgic
+import shutil  # to move any existing db - we don't try to update it;
 
 def grab(html, file=False,  update=False, dev=None):
     '''
@@ -80,14 +79,19 @@ if __name__ == "__main__":
     tag_pat = re.compile(r'(#[a-zA-Z0-9_-]+)')
     hbreak = lambda i: i.name in ('br',)
 
+    # Always start on a fresh db
+    try:  # ignore if current db doesn't exist;
+        shutil.move( db_name, db_name+'-' )
+    except FileNotFoundError:
+        pass
+
     # TinyDB passes all but "storage" arguments on to json.dump(),
     #  so we're using indent here to "pretty-print" the output
     #  so that git versioning of the db's works;
+    TinyDB.DEFAULT_TABLE = notes_name
     db = TinyDB(db_name, indent=2)
-    Note = Query()
-
     # grab default table
-    # ... except this doesn't work the I expect:
+    # ... except this doesn't work the way I expect:
     # ... default_table doesn't do squat in opening the db
     notes = db.table(notes_name)
     archives = db.table(archives_name)
@@ -119,14 +123,10 @@ if __name__ == "__main__":
             assert len(note['class'])>0 and note['class'][0] == 'note', \
                    f'{filename} does not appear to be a note!'
 
-            # turns out "filename" selection is too random;  they could
-            #   have made a "key" but... not in their radar;
-            # NO! =>  note_dict = {'filename': filename}
             note_dict = {}
             key = 'unknown'
-            # set ensures no dup tags per note
 
-            # embbeded image from a twitter link caused trouble;
+            # embedded image from a twitter link caused trouble;
             #  - don't need to worry about it, as it's just a
             #    preview, but leaving this in for any future glitch;
             #  - it took a while for this one to crop up.
@@ -149,10 +149,6 @@ if __name__ == "__main__":
                 # save no empty lines, unless an explicit <br/>:
                 elif hbreak(i) or ( isinstance(i, str) and i.strip() ):
                     # every entry a list;
-                    ## BUG: TODO:  this is breaking / replicating w/ the update
-                    ##    paradigm;  need to fix this before using...
-                    ##  TODO:  ??? maybe not "get" existing, until after we've
-                    ##    completed this, and then just "diff" the lists?
                     note_dict[key].append('' if hbreak(i) else i.strip(newlines))
                     ## tag collection: we're in a string, so do it here
                     # places to skip looking for hashtags
@@ -175,145 +171,18 @@ if __name__ == "__main__":
                 # next element
                 i = i.next
             # save the note_dict into a storage - list, or db;
-
             if 'tags' in note_dict:
                 # sets are not JSON serializable:
                 note_dict['tags'] = list(note_dict['tags'])
-                # to avoid order-related changes to this table element:
+                # and let's have this not randomly generated:
                 note_dict['tags'].sort()
-
-            # after parsing a file, see if there's an
-            #   existing item to update
-            #   (not before - it doesn't work)
-
-            # if already in a table, then note which one
-            note_table = None  # default
-            # TODO:  here, filename can not be part of DB;
-            #
-            #  We have to approach identifying elements in a differnt
-            #  way.  It seems the following are perhaps the most
-            #  identifying (in decreasing order, with notes):
-            #  ---- if these exist, consider them matching even tho title can change
-            #  - 'title'    ; doesn't always exist
-            #  - 'heading'  ; a timestamp, but almost useless,
-            #               ; as it's possible to have 300 of same!!!
-            #  ---- a mojority match on these is probably most can hope for:
-            #  - 'labels'
-            #  - 'tags'
-            #  - 'content'
-            #  ---- this is probably the limit of reasonable tests
-            #  - 'attachments'
-            #  - 'bullet'    ; usually empty, or checklist checked
-            #  - 'text'      ; appears to be text to go w/ bullet
-            #  - 'listitem'  ; not sure what these are
-
-            # Keep drilling down until we find one Element:
-            if 'title' in note_dict:
-                this_query = (Note.title == note_dict['title'])
-            if 'heading' in note_dict:
-                this_query = this_query & (Note.heading == note_dict['heading'])
-
-            iter=0
-            nomatch = 0
-
-            while True:
-                iter += 1
-                n = notes.count(this_query)
-                m = archives.count(this_query)
-                print(f'notes matched: {n}, archiveds matched: {m}')
-
-                if n == 0 and m == 0:
-                    note_table = None
-                    break
-                elif n == 1:
-                    # found note to update
-                    note_table = notes
-                    note_elem = notes.get(this_query)
-                    break
-                elif m == 1:
-                    # found archive to update
-                    note_elem = archives.get(this_query)
-                    note_table = archives
-                    break
-                elif n > 0 and m == 0:  # most likely case
-                    # need to narrow from notes  # probably need to check for containment
-                    if iter == 1:
-                        if 'labels' in note_dict:
-                            this_query = this_query & (Note.labels == note_dict['labels'])
-                        # iterate; then
-                        if 'tags' in note_dict:
-                            this_query = this_query & (Note.tags == note_dict['tags'])
-                    elif iter == 2:
-                        if 'content' in note_dict:
-                            this_query = this_query & (Note.content.all(note_dict['content']))
-                    else:
-                        nomatch += 1
-                        break
-
-                #elif n == 0 and m > 0:  # less likely case
-                #    # need to narrow from archives
-                #    pass
-                else:  # unlikely case of found in both tables
-                    # need to narrow from both
-                    # put in a pdb trigger here, for development:
-                    import pdb
-                    pdb.set_trace()
-
-
-            # TODO: delete this block:
-            '''
-            if notes.contains(Note.filename == filename):
-                # Note: if multiple Elements w/ filename, this
-                #  silently gets only a possibly random one:
-                note_elem = notes.get(Note.filename == filename)
-                note_table = notes
-            elif archives.contains(Note.filename == filename):
-                note_elem = archives.get(Note.filename == filename)
-                note_table = archives
-            '''
-
-            def n_update(table_, old_, new_):
-                ''' table_: the tinydb table (or db)
-                    old_:   the existing element
-                    new_:   a dict containing new content
-
-                Before calling n_update():
-                    Fetch existing db element, if there is one;
-                    if it exists, then call n_update()
-                Then:
-                    - compare old & new records
-                    - if different, call n_update(), which:
-                        - take a set difference of the keys;
-                        - if keys dropped, delete them
-                        - update rest of eid w/ new record
-                '''
-
-                # database element and dict will compare ok:
-                # update only if changed:
-                if old_ != new_:
-                    table_.update(new_, eids=[old_.eid])
-                    # check for dropped keys; delete as necessary
-                    for i in set(old_) - set(new_):
-                        table_.update(delete(i), eids=[old_.eid])
-
-
-            # If possible, update, else insert these.
             if 'archived' in note_dict:
-                if note_table is archives:
-                    n_update(archives, note_elem, note_dict)
-                else:
-                    archives.insert(note_dict)
-                    if note_table is notes:
-                        # element moving between tables
-                        notes.remove(eids=[note_elem.eid])
+                archives.insert(note_dict)
             else:
-                if note_table is notes:
-                    n_update(notes, note_elem, note_dict)
-                else:  # note_table is None:
-                    notes.insert(note_dict)
+                notes.insert(note_dict)
 
     # add a newline, as filenames are just progress-spit on one line, above:
     print(f"\n{len(notes)} notes...")
     print(f"{len(archives)} archived notes...")
-    print(f"{nomatch} over-matched note updates...")
     db.close()
+

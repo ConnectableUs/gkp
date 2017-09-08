@@ -5,8 +5,10 @@ import os
 import re
 # from hashlib import sha1
 from bs4 import BeautifulSoup
-from tinydb import TinyDB
-import magic  # pip import python-mgic
+from tinydb import TinyDB, Query
+from tinydb.operations import delete
+
+import magic  # pip import python-magic
 
 def grab(html, file=False,  update=False, dev=None):
     '''
@@ -82,6 +84,8 @@ if __name__ == "__main__":
     #  so we're using indent here to "pretty-print" the output
     #  so that git versioning of the db's works;
     db = TinyDB(db_name, indent=2)
+    Note = Query()
+
     # grab default table
     # ... except this doesn't work the I expect:
     # ... default_table doesn't do squat in opening the db
@@ -115,12 +119,13 @@ if __name__ == "__main__":
             assert len(note['class'])>0 and note['class'][0] == 'note', \
                    f'{filename} does not appear to be a note!'
 
-            note_dict = {}
+            note_dict = {'filename': filename}
             key = 'unknown'
+            # set ensures no dup tags per note
 
-            # embeded image from a twitter link caused trouble;
+            # embbeded image from a twitter link caused trouble;
             #  - don't need to worry about it, as it's just a
-            #    prview, but leaving this in for any future glitch;
+            #    preview, but leaving this in for any future glitch;
             #  - it took a while for this one to crop up.
             '''
             if filename.startswith('Our experience'):
@@ -141,6 +146,10 @@ if __name__ == "__main__":
                 # save no empty lines, unless an explicit <br/>:
                 elif hbreak(i) or ( isinstance(i, str) and i.strip() ):
                     # every entry a list;
+                    ## BUG: TODO:  this is breaking / replicating w/ the update
+                    ##    paradigm;  need to fix this before using...
+                    ##  TODO:  ??? maybe not "get" existing, until after we've
+                    ##    completed this, and then just "diff" the lists?
                     note_dict[key].append('' if hbreak(i) else i.strip(newlines))
                     ## tag collection: we're in a string, so do it here
                     # places to skip looking for hashtags
@@ -163,16 +172,69 @@ if __name__ == "__main__":
                 # next element
                 i = i.next
             # save the note_dict into a storage - list, or db;
+
             if 'tags' in note_dict:
                 # sets are not JSON serializable:
                 note_dict['tags'] = list(note_dict['tags'])
+                # to avoid order-related changes to this table element:
+                note_dict['tags'].sort()
+
+            # after parsing a file, see if there's an
+            #   existing item to update
+            #   (not before - it doesn't work)
+
+            # if already in a table, then note which one
+            note_table = None  # default
+            if notes.contains(Note.filename == filename):
+                # Note: if multiple Elements w/ filename, this
+                #  silently gets only a possibly random one:
+                note_elem = notes.get(Note.filename == filename)
+                note_table = notes
+            elif archives.contains(Note.filename == filename):
+                note_elem = archives.get(Note.filename == filename)
+                note_table = archives
+
+            def n_update(table_, old_, new_):
+                ''' table_: the tinydb table (or db)
+                    old_:   the existing element
+                    new_:   a dict containing new content
+
+                Before calling n_update():
+                    Fetch existing db element, if there is one;
+                    if it exists, then call n_update()
+                Then:
+                    - compare old & new records
+                    - if different, call n_update(), which:
+                        - take a set difference of the keys;
+                        - if keys dropped, delete them
+                        - update rest of eid w/ new record
+                '''
+
+                # database element and dict will compare ok:
+                # update only if changed:
+                if old_ != new_:
+                    table_.update(new_, eids=[old_.eid])
+                    # check for dropped keys; delete as necessary
+                    for i in set(old_) - set(new_):
+                        table_.update(delete(i), eids=[old_.eid])
+
+
+            # If possible, update, else insert these.
             if 'archived' in note_dict:
-                archives.insert(note_dict)
+                if note_table is archives:
+                    n_update(archives, note_elem, note_dict)
+                else:
+                    archives.insert(note_dict)
+                    if note_table is notes:
+                        # element moving between tables
+                        notes.remove(eids=[note_elem.eid])
             else:
-                notes.insert(note_dict)
+                if note_table is notes:
+                    n_update(notes, note_elem, note_dict)
+                else:  # note_table is None:
+                    notes.insert(note_dict)
 
     # add a newline, as filenames are just progress-spit on one line, above:
     print(f"\n{len(notes)} notes...")
     print(f"{len(archives)} archived notes...")
     db.close()
-

@@ -119,7 +119,10 @@ if __name__ == "__main__":
             assert len(note['class'])>0 and note['class'][0] == 'note', \
                    f'{filename} does not appear to be a note!'
 
-            note_dict = {'filename': filename}
+            # turns out "filename" selection is too random;  they could
+            #   have made a "key" but... not in their radar;
+            # NO! =>  note_dict = {'filename': filename}
+            note_dict = {}
             key = 'unknown'
             # set ensures no dup tags per note
 
@@ -185,6 +188,80 @@ if __name__ == "__main__":
 
             # if already in a table, then note which one
             note_table = None  # default
+            # TODO:  here, filename can not be part of DB;
+            #
+            #  We have to approach identifying elements in a differnt
+            #  way.  It seems the following are perhaps the most
+            #  identifying (in decreasing order, with notes):
+            #  ---- if these exist, consider them matching even tho title can change
+            #  - 'title'    ; doesn't always exist
+            #  - 'heading'  ; a timestamp, but almost useless,
+            #               ; as it's possible to have 300 of same!!!
+            #  ---- a mojority match on these is probably most can hope for:
+            #  - 'labels'
+            #  - 'tags'
+            #  - 'content'
+            #  ---- this is probably the limit of reasonable tests
+            #  - 'attachments'
+            #  - 'bullet'    ; usually empty, or checklist checked
+            #  - 'text'      ; appears to be text to go w/ bullet
+            #  - 'listitem'  ; not sure what these are
+
+            # Keep drilling down until we find one Element:
+            if 'title' in note_dict:
+                this_query = (Note.title == note_dict['title'])
+            if 'heading' in note_dict:
+                this_query = this_query & (Note.heading == note_dict['heading'])
+
+            iter=0
+            nomatch = 0
+
+            while True:
+                iter += 1
+                n = notes.count(this_query)
+                m = archives.count(this_query)
+                print(f'notes matched: {n}, archiveds matched: {m}')
+
+                if n == 0 and m == 0:
+                    note_table = None
+                    break
+                elif n == 1:
+                    # found note to update
+                    note_table = notes
+                    note_elem = notes.get(this_query)
+                    break
+                elif m == 1:
+                    # found archive to update
+                    note_elem = archives.get(this_query)
+                    note_table = archives
+                    break
+                elif n > 0 and m == 0:  # most likely case
+                    # need to narrow from notes  # probably need to check for containment
+                    if iter == 1:
+                        if 'labels' in note_dict:
+                            this_query = this_query & (Note.labels == note_dict['labels'])
+                        # iterate; then
+                        if 'tags' in note_dict:
+                            this_query = this_query & (Note.tags == note_dict['tags'])
+                    elif iter == 2:
+                        if 'content' in note_dict:
+                            this_query = this_query & (Note.content.all(note_dict['content']))
+                    else:
+                        nomatch += 1
+                        break
+
+                #elif n == 0 and m > 0:  # less likely case
+                #    # need to narrow from archives
+                #    pass
+                else:  # unlikely case of found in both tables
+                    # need to narrow from both
+                    # put in a pdb trigger here, for development:
+                    import pdb
+                    pdb.set_trace()
+
+
+            # TODO: delete this block:
+            '''
             if notes.contains(Note.filename == filename):
                 # Note: if multiple Elements w/ filename, this
                 #  silently gets only a possibly random one:
@@ -193,6 +270,7 @@ if __name__ == "__main__":
             elif archives.contains(Note.filename == filename):
                 note_elem = archives.get(Note.filename == filename)
                 note_table = archives
+            '''
 
             def n_update(table_, old_, new_):
                 ''' table_: the tinydb table (or db)
@@ -237,4 +315,5 @@ if __name__ == "__main__":
     # add a newline, as filenames are just progress-spit on one line, above:
     print(f"\n{len(notes)} notes...")
     print(f"{len(archives)} archived notes...")
+    print(f"{nomatch} over-matched note updates...")
     db.close()

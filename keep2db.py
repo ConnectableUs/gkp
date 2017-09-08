@@ -176,6 +176,8 @@ if __name__ == "__main__":
                 note_dict['tags'] = list(note_dict['tags'])
                 # and let's have this not randomly generated:
                 note_dict['tags'].sort()
+            if 'labels' in note_dict:
+                note_dict['labels'].sort()
             if 'archived' in note_dict:
                 archives.insert(note_dict)
             else:

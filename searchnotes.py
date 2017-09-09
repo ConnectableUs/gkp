@@ -1,7 +1,7 @@
 # coding: utf-8
 import re
 import yaml
-from tinydb import TinyDB  #, Query
+from tinydb import TinyDB, Query
 
 
 # load parsed notes into something to search for:

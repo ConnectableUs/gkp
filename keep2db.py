@@ -147,7 +147,7 @@ if __name__ == "__main__":
                     if key not in note_dict:
                         note_dict[key] = []
                 # save no empty lines, unless an explicit <br/>:
-                elif hbreak(i) or ( isinstance(i, str) and i.strip() ):
+                elif hbreak(i) or (isinstance(i, str) and i.strip()):
                     # every entry a list;
                     note_dict[key].append('' if hbreak(i) else i.strip(newlines))
                     ## tag collection: we're in a string, so do it here
@@ -155,7 +155,7 @@ if __name__ == "__main__":
                     # - don't search empty strings, <brk/>, or
                     #   the things which are timestamps, or already tag-like
                     if i and not hbreak(i) \
-                       and key not in ('archive','heading','labels'):
+                       and key not in ('archive', 'heading', 'labels'):
                         assert isinstance(i, str), \
                             f"i: [{i}] is type {type(i)}; str needed"
                         tags = tag_pat.findall(i)

@@ -6,6 +6,7 @@
 
 DEST=./Takeout
 
+echo rm -rf $DEST/*
 rm -rf $DEST/*
 
 # unpack the latest archive
@@ -13,6 +14,7 @@ rm -rf $DEST/*
 SRCD=my-google-data-downloads
 SRC="$SRCD/$(ls -rt $SRCD | tail -1)"
 
+echo tar xzf $SRC
 tar xzf $SRC
 
 # finally, make a new DB from this:

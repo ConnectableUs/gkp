@@ -11,9 +11,9 @@ from tinydb import TinyDB, Query
 db = TinyDB('keep-db/Keep.json', indent=2)
 dbnotes = db.table('notes')
 dbarchive = db.table('archived')
-#- this doesn't work as I'd want
-# res = table.search(Note.title.any(['Summit']))
-#- so this is to make search look through all note text
+# - this doesn't work as I'd want
+#   res = table.search(Note.title.any(['Summit']))
+# - so this is to make search look through all note text
 
 # This is not necessary anymore, but is left here for
 #  examples of forms you can sent to findnotes(),
@@ -30,7 +30,10 @@ myre = (r'summit', re.I)
 def findnotes(myre, notes, fields=set()):
     '''
     myre:  regular expression to search for;
-           can be search-string, or tuple w/ (string, RE-flags);
+           can be search-string, or tuple w/ (string, RE-flags, such as re.I)
+           note: you can also pass RE-flags at stort of string (e.g.: "(?i)this")
+           See 'special characters' under
+           https://docs.python.org/3/library/re.html#regular-expression-syntax;
     notes: a generator or list of notes, or a list of tinydb table.Elements
     fields: fields to search (searches all if empty)
     '''

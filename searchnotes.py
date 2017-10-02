@@ -22,10 +22,30 @@ dbarchive = db.table('archived')
 #  list of notes (thus you can narrow searches)
 ## make it a python form, so we can use it
 # get rid of db.Element cruft (e.g. record numbering):
-# - might as well make it a generator, for memory skimpiness
-notes = (dict(n) for n in dbnotes)
+# - could make it a generator, for memory skimpiness
+#   but that is ill-suited to interactive use
+
+notes = [dict(n) for n in dbnotes]
+# example:
 myre = (r'summit', re.I)
 
+# announce for the interactive user, what's what:
+def intro(notes=notes, myre=myre):
+    msg = f"""
+    Intro:
+    {len(notes)} notes available as variable: 'notes'
+
+    example search-term available:  myre: ('summit', re.I)
+
+    use findnotes() and savefind(); help() for more info;
+
+    tinyDB tables available: dbnotes, dbarchive
+
+    To show this message again:  intro()
+    """
+    print(msg)
+
+intro()
 
 def findnotes(myre, notes, fields=set()):
     '''

@@ -29,44 +29,33 @@ notes = [dict(n) for n in dbnotes]
 # example:
 myre = (r'summit', re.I)
 
-# announce for the interactive user, what's what:
-def intro(notes=notes, myre=myre):
-    msg = f"""
-    Intro:
-    {len(notes)} notes available as variable: 'notes'
 
-    example search-term available:  myre: ('summit', re.I)
-
-    use findnotes() and savefind(); help() for more info;
-
-    tinyDB tables available: dbnotes, dbarchive
-
-    To show this message again:  intro()
-    """
-    print(msg)
-
-intro()
-
-def findnotes(myre, notes, fields=set()):
+def findnotes(myre, notes, fields=set(), inversion="!"):
     '''
     myre:  regular expression to search for;
            can be search-string, or tuple w/ (string, RE-flags, such as re.I)
            note: you can also pass RE-flags at stort of string (e.g.: "(?i)this")
            See 'special characters' under
            https://docs.python.org/3/library/re.html#regular-expression-syntax;
+           note: special to this function:  re starting with "!" will cause
+           a search negation (like grep -v);
     notes: a generator or list of notes, or a list of tinydb table.Elements
     fields: fields to search (searches all if empty)
+    inversion: set alternate lead string to signify search inversion;
+               this is stripped before re-compile.
     '''
     from types import GeneratorType
 
-    # accept multiple forms of myre for pattern
-    # Note: this is the consequence of the unpack operator
-    #       binding to the entire expression in a function-call:
-    pat = re.compile( *(myre if isinstance(myre, (list,tuple)) \
-                    else (myre,)) )
-    # this kind of dual-call is unnecessary:
-    # pat = re.compile(*myre) if isinstance(myre, (list,tuple)) \
-    #   else re.compile(myre)
+    # check for search inversion:
+    flags = []
+    if isinstance(myre, (list,tuple)):
+        myre, *flags = myre
+
+    inv = myre.startswith(inversion)
+    if inv:
+        myre = myre[len(inversion):]
+
+    pat = re.compile(myre, *flags)
 
     found = []   # return this
     # make this the form of a list list if needed:
@@ -86,9 +75,13 @@ def findnotes(myre, notes, fields=set()):
                 else:
                     if pat.findall(v):
                         this_note = True
-                if this_note:
+                # on positive search, stop w/ any find:
+                if not inv and this_note is True:
                     found.append(note)
                     break
+        # w/ inv search, check all note items, then:
+        if inv and this_note is False:
+            found.append(note)
 
     return found
 
@@ -131,4 +124,29 @@ def savefind(note_list, file_name, mode="w", start=0,
     inotes = dict(zip(string_range(start,list_len,w), note_list))
     with open(file_name, mode) as f:
         yaml.dump(inotes, f, default_flow_style=False)
+
+
+# announce for the interactive user, what's what:
+def intro(notes=notes, myre=myre):
+    msg = f"""
+    Intro:
+    {len(notes)} notes available as variable: 'notes'
+
+    example search-term available:  myre: ('summit', re.I)
+
+    use findnotes() and savefind(); help() for more info;
+
+    tinyDB tables available: dbnotes, dbarchive
+    tinyDB Query() is imported, if you want to create
+       a db, instead of a text search.
+       e.g: Note = Query()
+            dbnotes.search(Note.labels == "['golang']" ...)
+            See http://tinydb.readthedocs.io/en/latest/usage.html#queries
+
+    To show this message again:  intro()
+    """
+    print(msg)
+
+
+intro()
 
